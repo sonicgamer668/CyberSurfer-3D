@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberSurfer 3D - Advanced Endless Runner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(ellipse at center, #0a0a0a 0%, #000000 100%);
+            font-family: 'Orbitron', 'Courier New', monospace;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        #gameContainer {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            color: #00ff41;
+            font-weight: bold;
+            text-shadow: 0 0 20px #00ff41;
+            font-size: 18px;
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, rgba(255,0,128,0.1), rgba(0,255,255,0.1));
+            backdrop-filter: blur(10px);
+            border: 3px solid #ff0080;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 0 50px #ff0080, inset 0 0 50px rgba(255,0,128,0.1);
+            min-width: 300px;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            color: #ffff00;
+            text-shadow: 0 0 15px #ffff00;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        #comboDisplay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1500;
+            color: #ff0080;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 30px #ff0080;
+            display: none;
+            animation: comboGlow 0.5s ease-in-out;
+        }
+
+        @keyframes comboGlow {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+
+        .glow {
+            text-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff0080, #00ffff, #ff0080);
+            background-size: 200% 200%;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: 'Orbitron', monospace;
+            cursor: pointer;
+            border-radius: 10px;
+            margin: 10px;
+            text-shadow: none;
+            font-weight: bold;
+            animation: buttonShine 3s infinite;
+            transition: all 0.3s;
+        }
+
+        @keyframes buttonShine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        button:hover {
+            box-shadow: 0 0 30px #ff0080;
+            transform: scale(1.05);
+        }
+
+        #speedometer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            border: 3px solid #00ffff;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(0,255,255,0.1), transparent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #00ffff;
+            text-shadow: 0 0 20px #00ffff;
+            z-index: 1000;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div>💎 Score: <span id="score" class="glow">0</span></div>
+            <div>⚡ Combo: <span id="combo" class="glow">x1</span></div>
+            <div>🏆 Best: <span id="highScore" class="glow">0</span></div>
+            <div id="boostIndicator" style="display: none;">🚀 BOOST: <span id="boostTime" class="glow">0.0s</span></div>
+        </div>
+
+        <div id="speedometer">
+            <div><span id="speedValue">0</span><br><small>KM/H</small></div>
+        </div>
+
+        <div id="comboDisplay">COMBO x2!</div>
+
+        <div id="gameOverScreen">
+            <h1 style="color: #ff0080; text-shadow: 0 0 30px #ff0080; margin-bottom: 20px;">GAME OVER</h1>
+            <p style="color: #00ffff; font-size: 20px;">Final Score: <span id="finalScore" class="glow">0</span></p>
+            <p style="color: #ffff00; font-size: 16px; margin: 10px 0;">Distance: <span id="finalDistance">0</span>m</p>
+            <button onclick="restartGame()">🚀 RESTART</button>
+        </div>
+
+        <div id="instructions">
+            <div>🎮 <strong>ADVANCED CONTROLS:</strong></div>
+            <div>⬅️➡️ A/D: Switch Lanes | 🚀 SPACE: Jump | ⬇️ S: Slide</div>
+            <div>🎯 Collect: 💎 Gems | ⚡ Boost | 🌟 Star | 🛡️ Shield</div>
+            <div>💥 Avoid: 🔴 Barriers | ⚠️ Spikes | 🧱 Walls</div>
+        </div>
+    </div>
+
+    <!-- Advanced Three.js with post-processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r150/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.150.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+    <script>
+        // Advanced Game Engine
+        class CyberSurferGame {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.composer = null;
+                this.player = null;
+                this.playerTrail = null;
+
+                // Game state
+                this.gameSpeed = 25;
+                this.baseSpeed = 25;
+                this.maxSpeed = 60;
+                this.score = 0;
+                this.distance = 0;
+                this.combo = 1;
+                this.comboTimer = 0;
+                this.gameOver = false;
+                this.highScore = localStorage.getItem('cyberSurferHighScore') || 0;
+
+                // Player state
+                this.currentLane = 0; // -1, 0, 1 (left, center, right)
+                this.targetLane = 0;
+                this.playerY = 1;
+                this.playerVY = 0;
+                this.isJumping = false;
+                this.isSliding = false;
+                this.isGrounded = true;
+                this.slideTimer = 0;
+
+                // Power-ups
+                this.isBoosted = false;
+                this.boostTimer = 0;
+                this.hasShield = false;
+                this.shieldTimer = 0;
+
+                // Game objects
+                this.obstacles = [];
+                this.collectibles = [];
+                this.particles = [];
+                this.lanes = [-4, 0, 4]; // x positions for lanes
+
+                // Constants
+                this.LANE_WIDTH = 4;
+                this.JUMP_FORCE = 18;
+                this.GRAVITY = -45;
+                this.SLIDE_DURATION = 1;
+                this.GROUND_Y = 1;
+
+                // Input
+                this.keys = {};
+                this.lastKeyTime = {};
+
+                this.init();
+            }
+
+            init() {
+                this.setupScene();
+                this.setupLighting();
+                this.setupPostProcessing();
+                this.createPlayer();
+                this.createGround();
+                this.setupEventListeners();
+                this.updateHighScore();
+                this.animate();
+            }
+
+            setupScene() {
+                this.scene = new THREE.Scene();
+                this.scene.fog = new THREE.Fog(0x000011, 30, 200);
+
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 12, 12);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(window.devicePixelRatio);
+                this.renderer.setClearColor(0x000011);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.renderer.toneMapping = THREE.ReinhardToneMapping;
+                this.renderer.toneMappingExposure = 1.2;
+
+                document.getElementById('gameContainer').appendChild(this.renderer.domElement);
+            }
+
+            setupLighting() {
+                // Ambient light
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.2);
+                this.scene.add(ambientLight);
+
+                // Main directional light
+                const mainLight = new THREE.DirectionalLight(0x00ffff, 1.5);
+                mainLight.position.set(0, 20, 10);
+                mainLight.castShadow = true;
+                mainLight.shadow.mapSize.width = 4096;
+                mainLight.shadow.mapSize.height = 4096;
+                mainLight.shadow.camera.near = 0.1;
+                mainLight.shadow.camera.far = 100;
+                mainLight.shadow.camera.left = -20;
+                mainLight.shadow.camera.right = 20;
+                mainLight.shadow.camera.top = 20;
+                mainLight.shadow.camera.bottom = -20;
+                this.scene.add(mainLight);
+
+                // Accent lights
+                const leftLight = new THREE.PointLight(0xff0080, 1, 50);
+                leftLight.position.set(-10, 5, 0);
+                this.scene.add(leftLight);
+
+                const rightLight = new THREE.PointLight(0x00ff80, 1, 50);
+                rightLight.position.set(10, 5, 0);
+                this.scene.add(rightLight);
+            }
+
+            setupPostProcessing() {
+                // Bloom effect for that cyberpunk look
+                this.composer = new THREE.EffectComposer(this.renderer);
+
+                const renderPass = new THREE.RenderPass(this.scene, this.camera);
+                this.composer.addPass(renderPass);
+
+                const bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    0.4, 0.8, 0.1
+                );
+                this.composer.addPass(bloomPass);
+            }
+
+            createPlayer() {
+                // Create advanced player with glowing effects
+                const playerGroup = new THREE.Group();
+
+                // Main body
+                const bodyGeometry = new THREE.CapsuleGeometry(0.3, 1.2, 8, 16);
+                const bodyMaterial = new THREE.MeshPhongMaterial({
+                    color: 0xffffff,
+                    emissive: 0x002244,
+                    shininess: 100
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.castShadow = true;
+                playerGroup.add(body);
+
+                // Glowing core
+                const coreGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+                const coreMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const core = new THREE.Mesh(coreGeometry, coreMaterial);
+                core.position.y = 0.2;
+                playerGroup.add(core);
+
+                // Energy trail
+                const trailGeometry = new THREE.PlaneGeometry(0.5, 3);
+                const trailMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                this.playerTrail = new THREE.Mesh(trailGeometry, trailMaterial);
+                this.playerTrail.position.z = -1.5;
+                playerGroup.add(this.playerTrail);
+
+                playerGroup.position.set(0, this.GROUND_Y, 0);
+                this.player = playerGroup;
+                this.scene.add(playerGroup);
+            }
+
+            createGround() {
+                // Create cyberpunk grid ground
+                const groundGroup = new THREE.Group();
+
+                for (let i = -100; i <= 100; i++) {
+                    for (let j = 0; j < 200; j++) {
+                        if ((i + j) % 4 === 0) { // Sparse grid for performance
+                            const geometry = new THREE.PlaneGeometry(3.8, 3.8);
+                            const material = new THREE.MeshLambertMaterial({
+                                color: 0x001133,
+                                transparent: true,
+                                opacity: 0.6,
+                                emissive: 0x000022
+                            });
+
+                            const tile = new THREE.Mesh(geometry, material);
+                            tile.rotation.x = -Math.PI / 2;
+                            tile.position.set(i * 4, 0, -j * 4);
+                            tile.receiveShadow = true;
+                            groundGroup.add(tile);
+                        }
+                    }
+                }
+
+                // Add lane markers
+                for (let lane of this.lanes) {
+                    for (let z = 0; z < 200; z += 10) {
+                        const markerGeometry = new THREE.BoxGeometry(0.2, 0.1, 2);
+                        const markerMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x00ff41,
+                            emissive: 0x004411
+                        });
+                        const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                        marker.position.set(lane, 0.05, -z);
+                        groundGroup.add(marker);
+                    }
+                }
+
+                this.scene.add(groundGroup);
+            }
+
+            setupEventListeners() {
+                document.addEventListener('keydown', (e) => this.onKeyDown(e));
+                document.addEventListener('keyup', (e) => this.onKeyUp(e));
+                window.addEventListener('resize', () => this.onWindowResize());
+
+                // Touch controls for mobile
+                let startX = 0;
+                let startY = 0;
+
+                this.renderer.domElement.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                });
+
+                this.renderer.domElement.addEventListener('touchend', (e) => {
+                    const endX = e.changedTouches[0].clientX;
+                    const endY = e.changedTouches[0].clientY;
+                    const deltaX = endX - startX;
+                    const deltaY = endY - startY;
+
+                    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                        if (deltaX > 50) this.switchLane(1);
+                        else if (deltaX < -50) this.switchLane(-1);
+                    } else {
+                        if (deltaY < -50) this.jump();
+                        else if (deltaY > 50) this.slide();
+                    }
+                });
+            }
+
+            onKeyDown(e) {
+                this.keys[e.code] = true;
+                const now = Date.now();
+
+                // Prevent spam
+                if (now - (this.lastKeyTime[e.code] || 0) < 100) return;
+                this.lastKeyTime[e.code] = now;
+
+                switch(e.code) {
+                    case 'KeyA':
+                    case 'ArrowLeft':
+                        this.switchLane(-1);
+                        e.preventDefault();
+                        break;
+                    case 'KeyD':
+                    case 'ArrowRight':
+                        this.switchLane(1);
+                        e.preventDefault();
+                        break;
+                    case 'KeyW':
+                    case 'Space':
+                        this.jump();
+                        e.preventDefault();
+                        break;
+                    case 'KeyS':
+                    case 'ArrowDown':
+                        this.slide();
+                        e.preventDefault();
+                        break;
+                    case 'KeyR':
+                        this.restartGame();
+                        e.preventDefault();
+                        break;
+                }
+            }
+
+            onKeyUp(e) {
+                this.keys[e.code] = false;
+            }
+
+            switchLane(direction) {
+                if (this.gameOver) return;
+                this.targetLane = Math.max(-1, Math.min(1, this.currentLane + direction));
+            }
+
+            jump() {
+                if (this.gameOver || !this.isGrounded) return;
+                this.playerVY = this.JUMP_FORCE;
+                this.isJumping = true;
+                this.isGrounded = false;
+                this.isSliding = false;
+            }
+
+            slide() {
+                if (this.gameOver || !this.isGrounded) return;
+                this.isSliding = true;
+                this.slideTimer = this.SLIDE_DURATION;
+            }
+
+            updatePlayer(deltaTime) {
+                if (this.gameOver) return;
+
+                // Lane switching with smooth interpolation
+                if (this.currentLane !== this.targetLane) {
+                    const lerpSpeed = 12 * deltaTime;
+                    const currentX = this.lanes[this.currentLane + 1];
+                    const targetX = this.lanes[this.targetLane + 1];
+
+                    this.player.position.x += (targetX - this.player.position.x) * lerpSpeed;
+
+                    if (Math.abs(this.player.position.x - targetX) < 0.1) {
+                        this.currentLane = this.targetLane;
+                        this.player.position.x = targetX;
+                    }
+                }
+
+                // Vertical movement (jumping/gravity)
+                if (!this.isGrounded) {
+                    this.playerVY += this.GRAVITY * deltaTime;
+                }
+
+                this.playerY += this.playerVY * deltaTime;
+
+                // Ground collision
+                if (this.playerY <= this.GROUND_Y) {
+                    this.playerY = this.GROUND_Y;
+                    this.playerVY = 0;
+                    this.isGrounded = true;
+                    this.isJumping = false;
+                }
+
+                // Sliding
+                if (this.isSliding) {
+                    this.slideTimer -= deltaTime;
+                    if (this.slideTimer <= 0) {
+                        this.isSliding = false;
+                    }
+                }
+
+                // Update player visual position
+                const slideOffset = this.isSliding ? -0.5 : 0;
+                this.player.position.y = this.playerY + slideOffset;
+
+                // Player rotation for style
+                this.player.rotation.z = Math.sin(Date.now() * 0.01) * 0.1;
+                if (this.playerTrail) {
+                    this.playerTrail.material.opacity = 0.3 + Math.sin(Date.now() * 0.02) * 0.2;
+                }
+
+                // Boost effects
+                if (this.isBoosted) {
+                    this.boostTimer -= deltaTime;
+                    this.player.children[1].material.color.setHex(0xff0080); // Core color
+
+                    if (this.boostTimer <= 0) {
+                        this.isBoosted = false;
+                        this.gameSpeed = this.baseSpeed;
+                        this.player.children[1].material.color.setHex(0x00ffff);
+                    }
+                }
+
+                // Shield effects
+                if (this.hasShield) {
+                    this.shieldTimer -= deltaTime;
+
+                    if (this.shieldTimer <= 0) {
+                        this.hasShield = false;
+                    }
+                }
+
+                // Combo timer
+                if (this.comboTimer > 0) {
+                    this.comboTimer -= deltaTime;
+                    if (this.comboTimer <= 0) {
+                        this.combo = 1;
+                    }
+                }
+            }
+
+            spawnObstacle() {
+                if (Math.random() > 0.3) return; // 30% spawn chance
+
+                const types = ['barrier', 'spike', 'wall', 'laser'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                const lane = Math.floor(Math.random() * 3) - 1;
+                const x = this.lanes[lane + 1];
+                const z = this.player.position.z - 150 - Math.random() * 50;
+
+                let obstacle;
+
+                switch(type) {
+                    case 'barrier':
+                        obstacle = this.createBarrier(x, z);
+                        break;
+                    case 'spike':
+                        obstacle = this.createSpike(x, z);
+                        break;
+                    case 'wall':
+                        obstacle = this.createWall(x, z);
+                        break;
+                    case 'laser':
+                        obstacle = this.createLaser(x, z);
+                        break;
+                }
+
+                if (obstacle) {
+                    this.obstacles.push(obstacle);
+                    this.scene.add(obstacle);
+                }
+            }
+
+            createBarrier(x, z) {
+                const geometry = new THREE.BoxGeometry(2, 3, 1);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0xff0000,
+                    emissive: 0x440000,
+                    shininess: 100
+                });
+                const barrier = new THREE.Mesh(geometry, material);
+                barrier.position.set(x, 1.5, z);
+                barrier.castShadow = true;
+                barrier.userData = { type: 'obstacle', damage: 1 };
+                return barrier;
+            }
+
+            createSpike(x, z) {
+                const geometry = new THREE.ConeGeometry(0.8, 4, 8);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0xff4400,
+                    emissive: 0x441100
+                });
+                const spike = new THREE.Mesh(geometry, material);
+                spike.position.set(x, 2, z);
+                spike.castShadow = true;
+                spike.userData = { type: 'obstacle', damage: 1 };
+                return spike;
+            }
+
+            createWall(x, z) {
+                const geometry = new THREE.BoxGeometry(3, 6, 1);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0x660000,
+                    emissive: 0x220000
+                });
+                const wall = new THREE.Mesh(geometry, material);
+                wall.position.set(x, 3, z);
+                wall.castShadow = true;
+                wall.userData = { type: 'obstacle', damage: 1 };
+                return wall;
+            }
+
+            createLaser(x, z) {
+                const group = new THREE.Group();
+
+                // Laser beam
+                const beamGeometry = new THREE.BoxGeometry(0.1, 4, 0.1);
+                const beamMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0080,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+                beam.position.y = 2;
+                group.add(beam);
+
+                group.position.set(x, 0, z);
+                group.userData = { type: 'obstacle', damage: 1, isLaser: true };
+                return group;
+            }
+
+            spawnCollectible() {
+                if (Math.random() > 0.4) return; // 40% spawn chance
+
+                const types = ['gem', 'boost', 'star', 'shield'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                const lane = Math.floor(Math.random() * 3) - 1;
+                const x = this.lanes[lane + 1];
+                const z = this.player.position.z - 100 - Math.random() * 100;
+
+                let collectible;
+
+                switch(type) {
+                    case 'gem':
+                        collectible = this.createGem(x, z);
+                        break;
+                    case 'boost':
+                        collectible = this.createBoost(x, z);
+                        break;
+                    case 'star':
+                        collectible = this.createStar(x, z);
+                        break;
+                    case 'shield':
+                        collectible = this.createShield(x, z);
+                        break;
+                }
+
+                if (collectible) {
+                    this.collectibles.push(collectible);
+                    this.scene.add(collectible);
+                }
+            }
+
+            createGem(x, z) {
+                const geometry = new THREE.OctahedronGeometry(0.5);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x00ff88,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const gem = new THREE.Mesh(geometry, material);
+                gem.position.set(x, 2, z);
+                gem.userData = { type: 'gem', value: 10, rotationSpeed: 0.05 };
+                return gem;
+            }
+
+            createBoost(x, z) {
+                const geometry = new THREE.CylinderGeometry(0.6, 0.6, 0.3, 16);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xffff00,
+                    emissive: 0x444400
+                });
+                const boost = new THREE.Mesh(geometry, material);
+                boost.position.set(x, 1.5, z);
+                boost.userData = { type: 'boost', rotationSpeed: 0.08 };
+                return boost;
+            }
+
+            createStar(x, z) {
+                const geometry = new THREE.ConeGeometry(0.4, 1, 5);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    emissive: 0x444444
+                });
+                const star = new THREE.Mesh(geometry, material);
+                star.position.set(x, 2.5, z);
+                star.userData = { type: 'star', value: 50, rotationSpeed: 0.1 };
+                return star;
+            }
+
+            createShield(x, z) {
+                const geometry = new THREE.SphereGeometry(0.6, 16, 16);
+                const material = new THREE.MeshBasicMaterial({
+                    color: 0x0088ff,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const shield = new THREE.Mesh(geometry, material);
+                shield.position.set(x, 2, z);
+                shield.userData = { type: 'shield', rotationSpeed: 0.03 };
+                return shield;
+            }
+
+            updateObstacles(deltaTime) {
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obstacle = this.obstacles[i];
+                    obstacle.position.z += this.gameSpeed * deltaTime;
+
+                    // Animate laser effects
+                    if (obstacle.userData.isLaser) {
+                        obstacle.rotation.y += 0.1;
+                        obstacle.children[0].material.opacity = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
+                    }
+
+                    // Remove obstacles that are too far behind
+                    if (obstacle.position.z > this.player.position.z + 20) {
+                        this.scene.remove(obstacle);
+                        this.obstacles.splice(i, 1);
+                    }
+                }
+            }
+
+            updateCollectibles(deltaTime) {
+                for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                    const collectible = this.collectibles[i];
+                    collectible.position.z += this.gameSpeed * deltaTime;
+
+                    // Rotation animation
+                    if (collectible.userData.rotationSpeed) {
+                        collectible.rotation.y += collectible.userData.rotationSpeed;
+                        collectible.position.y += Math.sin(Date.now() * 0.005 + i) * 0.02;
+                    }
+
+                    // Remove collectibles that are too far behind
+                    if (collectible.position.z > this.player.position.z + 20) {
+                        this.scene.remove(collectible);
+                        this.collectibles.splice(i, 1);
+                    }
+                }
+            }
+
+            checkCollisions() {
+                const playerBox = new THREE.Box3().setFromObject(this.player);
+                const slideHeightReduction = this.isSliding ? 1 : 0;
+                playerBox.max.y -= slideHeightReduction;
+
+                // Check obstacle collisions
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    const obstacle = this.obstacles[i];
+                    const obstacleBox = new THREE.Box3().setFromObject(obstacle);
+
+                    if (playerBox.intersectsBox(obstacleBox)) {
+                        if (this.hasShield) {
+                            // Shield protects from damage
+                            this.hasShield = false;
+                            this.shieldTimer = 0;
+                        } else {
+                            this.gameOver = true;
+                            this.showGameOver();
+                            return;
+                        }
+
+                        // Remove obstacle after collision
+                        this.scene.remove(obstacle);
+                        this.obstacles.splice(i, 1);
+                    }
+                }
+
+                // Check collectible collisions
+                for (let i = this.collectibles.length - 1; i >= 0; i--) {
+                    const collectible = this.collectibles[i];
+                    const collectibleBox = new THREE.Box3().setFromObject(collectible);
+
+                    if (playerBox.intersectsBox(collectibleBox)) {
+                        this.collectItem(collectible);
+                        this.scene.remove(collectible);
+                        this.collectibles.splice(i, 1);
+                    }
+                }
+            }
+
+            collectItem(item) {
+                const type = item.userData.type;
+
+                switch(type) {
+                    case 'gem':
+                        this.score += (item.userData.value || 10) * this.combo;
+                        this.increaseCombo();
+                        break;
+                    case 'star':
+                        this.score += (item.userData.value || 50) * this.combo;
+                        this.increaseCombo();
+                        break;
+                    case 'boost':
+                        this.isBoosted = true;
+                        this.boostTimer = 4;
+                        this.gameSpeed = Math.min(this.maxSpeed, this.baseSpeed * 1.8);
+                        this.score += 25 * this.combo;
+                        break;
+                    case 'shield':
+                        this.hasShield = true;
+                        this.shieldTimer = 8;
+                        this.score += 30 * this.combo;
+                        break;
+                }
+            }
+
+            increaseCombo() {
+                this.combo = Math.min(this.combo + 1, 10);
+                this.comboTimer = 3; // Reset combo timer
+
+                if (this.combo > 2) {
+                    this.showCombo();
+                }
+            }
+
+            showCombo() {
+                const comboDisplay = document.getElementById('comboDisplay');
+                comboDisplay.textContent = `COMBO x${this.combo}!`;
+                comboDisplay.style.display = 'block';
+
+                setTimeout(() => {
+                    comboDisplay.style.display = 'none';
+                }, 1000);
+            }
+
+            updateCamera(deltaTime) {
+                // Dynamic camera following with speed-based offset
+                const speedFactor = this.gameSpeed / this.baseSpeed;
+                const targetX = this.player.position.x;
+                const targetY = 8 + speedFactor * 2;
+                const targetZ = this.player.position.z + 8 + speedFactor * 3;
+
+                // Smooth camera interpolation
+                this.camera.position.x += (targetX - this.camera.position.x) * 8 * deltaTime;
+                this.camera.position.y += (targetY - this.camera.position.y) * 4 * deltaTime;
+                this.camera.position.z += (targetZ - this.camera.position.z) * 6 * deltaTime;
+
+                // Look slightly ahead
+                this.camera.lookAt(
+                    this.player.position.x,
+                    this.player.position.y + 1,
+                    this.player.position.z - 10
+                );
+            }
+
+            updateUI() {
+                document.getElementById('score').textContent = Math.floor(this.score);
+                document.getElementById('combo').textContent = `x${this.combo}`;
+                document.getElementById('speedValue').textContent = Math.floor(this.gameSpeed * 3.6); // Convert to KM/H
+                document.getElementById('highScore').textContent = Math.floor(this.highScore);
+
+                if (this.isBoosted) {
+                    document.getElementById('boostIndicator').style.display = 'block';
+                    document.getElementById('boostTime').textContent = this.boostTimer.toFixed(1);
+                } else {
+                    document.getElementById('boostIndicator').style.display = 'none';
+                }
+            }
+
+            updateHighScore() {
+                this.highScore = Math.max(this.highScore, this.score);
+                localStorage.setItem('cyberSurferHighScore', this.highScore);
+                document.getElementById('highScore').textContent = Math.floor(this.highScore);
+            }
+
+            showGameOver() {
+                this.updateHighScore();
+                document.getElementById('finalScore').textContent = Math.floor(this.score);
+                document.getElementById('finalDistance').textContent = Math.floor(this.distance);
+                document.getElementById('gameOverScreen').style.display = 'block';
+            }
+
+            restartGame() {
+                // Reset all game state
+                this.gameOver = false;
+                this.score = 0;
+                this.distance = 0;
+                this.combo = 1;
+                this.comboTimer = 0;
+                this.gameSpeed = this.baseSpeed;
+
+                this.currentLane = 0;
+                this.targetLane = 0;
+                this.playerY = this.GROUND_Y;
+                this.playerVY = 0;
+                this.isJumping = false;
+                this.isSliding = false;
+                this.isGrounded = true;
+                this.slideTimer = 0;
+
+                this.isBoosted = false;
+                this.boostTimer = 0;
+                this.hasShield = false;
+                this.shieldTimer = 0;
+
+                // Reset player position
+                this.player.position.set(0, this.GROUND_Y, 0);
+                this.player.children[1].material.color.setHex(0x00ffff);
+
+                // Clear all objects
+                this.obstacles.forEach(obstacle => this.scene.remove(obstacle));
+                this.collectibles.forEach(collectible => this.scene.remove(collectible));
+                this.obstacles = [];
+                this.collectibles = [];
+
+                document.getElementById('gameOverScreen').style.display = 'none';
+                document.getElementById('boostIndicator').style.display = 'none';
+                document.getElementById('comboDisplay').style.display = 'none';
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                if (this.composer) {
+                    this.composer.setSize(window.innerWidth, window.innerHeight);
+                }
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+
+                const deltaTime = Math.min(0.05, 1/60); // Cap deltaTime for stability
+
+                if (!this.gameOver) {
+                    this.updatePlayer(deltaTime);
+                    this.updateObstacles(deltaTime);
+                    this.updateCollectibles(deltaTime);
+                    this.checkCollisions();
+                    this.updateCamera(deltaTime);
+
+                    // Spawn new objects
+                    if (Math.random() < 0.02) this.spawnObstacle();
+                    if (Math.random() < 0.015) this.spawnCollectible();
+
+                    // Gradually increase speed
+                    this.gameSpeed = Math.min(this.maxSpeed, this.baseSpeed + this.distance * 0.001);
+
+                    // Update distance
+                    this.distance += this.gameSpeed * deltaTime;
+                    this.score += Math.floor(this.gameSpeed * deltaTime * 0.1 * this.combo);
+                }
+
+                this.updateUI();
+
+                // Render with post-processing
+                if (this.composer) {
+                    this.composer.render();
+                } else {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            }
+        }
+
+        // Global restart function
+        function restartGame() {
+            if (window.game) {
+                window.game.restartGame();
+            }
+        }
+
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            window.game = new CyberSurferGame();
+        });
+
+    </script>
+</body>
+</html>
